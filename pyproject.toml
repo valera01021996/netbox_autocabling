@@ -16,7 +16,7 @@ dependencies = [
 
 [project.optional-dependencies]
 snmp = [
-    "pysnmp>=4.4.0",
+    "pysnmp-lextudio>=5.0.0",
 ]
 dev = [
     "pytest>=7.0.0",
