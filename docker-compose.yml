@@ -1,0 +1,24 @@
+services:
+  ipmi-autocabling:
+    image: ipmi-autocabling:latest
+    container_name: ipmi-autocabling
+    restart: "no"  # one-shot mode, use "always" for daemon
+    environment:
+      - NETBOX_URL=${NETBOX_URL}
+      - NETBOX_TOKEN=${NETBOX_TOKEN}
+      - NETBOX_VERIFY_SSL=${NETBOX_VERIFY_SSL:-false}
+      - SWITCHES_ROLE=${SWITCHES_ROLE:-sw}
+      - SNMP_COMMUNITY=${SNMP_COMMUNITY:-public}
+      - SNMP_VERSION=${SNMP_VERSION:-2c}
+      - SNMP_TIMEOUT=${SNMP_TIMEOUT:-5}
+      - SNMP_RETRIES=${SNMP_RETRIES:-2}
+      - STABILITY_RUNS=${STABILITY_RUNS:-2}
+      - POLL_INTERVAL=${POLL_INTERVAL:-0}
+      - DRY_RUN=${DRY_RUN:-false}
+      - CABLE_STATUS=${CABLE_STATUS:-planned}
+      - UPLINK_PORTS=${UPLINK_PORTS:-}
+      - UPLINK_PATTERNS=${UPLINK_PATTERNS:-}
+      - MLAG_GROUPS=${MLAG_GROUPS:-}
+    volumes:
+      - ./data:/data  # persistent state database
+    network_mode: host  # needed for SNMP to switches
