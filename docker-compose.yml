@@ -1,8 +1,8 @@
 services:
   ipmi-autocabling:
-    image: ipmi-autocabling:1.0.2
+    image: ipmi-autocabling:1.0.3
     container_name: ipmi-autocabling
-    restart: "no"  # one-shot mode, use "always" for daemon
+    restart: always
     environment:
       - NETBOX_URL=${NETBOX_URL}
       - NETBOX_TOKEN=${NETBOX_TOKEN}
@@ -13,7 +13,8 @@ services:
       - SNMP_TIMEOUT=${SNMP_TIMEOUT:-5}
       - SNMP_RETRIES=${SNMP_RETRIES:-2}
       - STABILITY_RUNS=${STABILITY_RUNS:-2}
-      - POLL_INTERVAL=${POLL_INTERVAL:-0}
+      - POLL_INTERVAL=${POLL_INTERVAL:-300}
+      - STATE_DB_PATH=/data/state.db
       - DRY_RUN=${DRY_RUN:-false}
       - CABLE_STATUS=${CABLE_STATUS:-planned}
       - UPLINK_PORTS=${UPLINK_PORTS:-}
