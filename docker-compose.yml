@@ -1,6 +1,6 @@
 services:
   ipmi-autocabling:
-    image: ipmi-autocabling:latest
+    image: ipmi-autocabling:1.0.2
     container_name: ipmi-autocabling
     restart: "no"  # one-shot mode, use "always" for daemon
     environment:
