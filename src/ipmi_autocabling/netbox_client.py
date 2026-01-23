@@ -11,6 +11,45 @@ from .config import Config
 
 logger = logging.getLogger(__name__)
 
+# Interface name mappings: (full_name, short_name) pairs
+# Order matters: longer prefixes first to avoid partial matches
+INTERFACE_NAME_MAP = [
+    # Huawei
+    ("XGigabitEthernet", "10GE"),
+    ("GigabitEthernet", "GE"),
+    ("TwentyFiveGigE", "25GE"),
+    ("FortyGigE", "40GE"),
+    ("HundredGigE", "100GE"),
+    # Cisco
+    ("TenGigabitEthernet", "Te"),
+    ("GigabitEthernet", "Gi"),
+    ("FastEthernet", "Fa"),
+    ("Ethernet", "Eth"),
+]
+
+
+def generate_interface_name_variants(name: str) -> list[str]:
+    """Generate alternative interface name variants for matching.
+
+    E.g. 'GigabitEthernet0/0/22' -> ['GigabitEthernet0/0/22', 'GE0/0/22', 'Gi0/0/22']
+         'GE0/0/22' -> ['GE0/0/22', 'GigabitEthernet0/0/22']
+    """
+    variants = [name]
+
+    for full, short in INTERFACE_NAME_MAP:
+        if name.startswith(full):
+            suffix = name[len(full):]
+            variant = short + suffix
+            if variant not in variants:
+                variants.append(variant)
+        elif name.startswith(short):
+            suffix = name[len(short):]
+            variant = full + suffix
+            if variant not in variants:
+                variants.append(variant)
+
+    return variants
+
 
 @dataclass
 class IPMIInterface:
@@ -248,27 +287,37 @@ class NetBoxClient:
     def get_switch_interface_by_name(
         self, switch_id: int, interface_name: str
     ) -> Optional[SwitchInterface]:
-        """Get switch interface by name."""
-        interfaces = self._get_all(
-            "dcim/interfaces/",
-            params={"device_id": switch_id, "name": interface_name}
+        """Get switch interface by name, trying alternative name variants."""
+        variants = generate_interface_name_variants(interface_name)
+
+        for variant in variants:
+            interfaces = self._get_all(
+                "dcim/interfaces/",
+                params={"device_id": switch_id, "name": variant}
+            )
+
+            if interfaces:
+                if variant != interface_name:
+                    logger.debug(
+                        f"Interface matched via variant: {interface_name} -> {variant}"
+                    )
+                iface = interfaces[0]
+                cable = iface.get("cable")
+
+                return SwitchInterface(
+                    id=iface.get("id"),
+                    name=iface.get("name"),
+                    device_id=switch_id,
+                    device_name=iface.get("device", {}).get("display") if iface.get("device") else "",
+                    description=iface.get("description"),
+                    has_cable=cable is not None,
+                    mgmt_only=iface.get("mgmt_only", False),
+                )
+
+        logger.debug(
+            f"Interface not found on device {switch_id}, tried: {variants}"
         )
-
-        if not interfaces:
-            return None
-
-        iface = interfaces[0]
-        cable = iface.get("cable")
-
-        return SwitchInterface(
-            id=iface.get("id"),
-            name=iface.get("name"),
-            device_id=switch_id,
-            device_name=iface.get("device", {}).get("display") if iface.get("device") else "",
-            description=iface.get("description"),
-            has_cable=cable is not None,
-            mgmt_only=iface.get("mgmt_only", False),
-        )
+        return None
 
     def get_switch_interface_by_index(
         self, switch_id: int, if_index: int
